@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Planner de Ações de MKT | SESI Vôlei MKT</title>
-  <meta name="description" content="Planner conectado ao Google Sheets para acompanhamento das ações de marketing do vôlei.">
+  <meta name="description" content="Planner conectado ao Supabase para acompanhamento das ações de marketing do vôlei.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,11 +12,11 @@
     <div>
       <p class="eyebrow">SESI Vôlei • Marketing e Comunicação</p>
       <h1>Planner de Ações de Marketing SESI Vôlei</h1>
-      <p>Edite os cards e salve direto no Google Sheets. As alterações passam a aparecer para todos automaticamente.</p>
+      <p>Edite os cards e salve direto no Supabase. As alterações passam a aparecer para todos automaticamente.</p>
       <div class="actions">
         <button id="addTaskBtn" class="btn btn-primary">+ Adicionar tarefa</button>
         <button id="saveBtn" class="btn btn-light">Salvar todas</button>
-        <button id="reloadBtn" class="btn btn-light">Recarregar do Sheets</button>
+        <button id="reloadBtn" class="btn btn-light">Recarregar base</button>
         <button id="collapseAllBtn" class="btn btn-light">Minimizar todos</button>
         <button id="expandAllBtn" class="btn btn-light">Expandir todos</button>
       </div>
@@ -31,7 +31,7 @@
 
   <main>
     <section class="alert">
-      <strong>Conectado ao Google Sheets:</strong> cada card tem botão de <strong>Minimizar/Expandir</strong> e botão <strong>Salvar card</strong>. Ao salvar, a alteração é enviada para a planilha e fica disponível para todos que acessarem o planner.
+      <strong>Conectado ao Supabase:</strong> cada card tem botão de <strong>Minimizar/Expandir</strong> e botão <strong>Salvar card</strong>. Ao salvar, a alteração é enviada para a base online e fica disponível para todos que acessarem o planner.
     </section>
 
     <section class="toolbar">
@@ -67,7 +67,7 @@
           <p class="eyebrow">Edição direta</p>
           <h2>Tarefas do planner</h2>
         </div>
-        <p>Cada alteração salva no card atualiza a base do Google Sheets.</p>
+        <p>Cada alteração salva no card atualiza o Supabase.</p>
       </div>
       <div id="cards" class="cards"></div>
     </section>
@@ -101,7 +101,7 @@
   </main>
 
   <footer>
-    <p>SESI Vôlei MKT • Planner conectado ao Google Sheets</p>
+    <p>SESI Vôlei MKT • Planner conectado ao Supabase</p>
   </footer>
 
   <script src="data.js"></script>

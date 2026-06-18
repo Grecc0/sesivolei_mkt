@@ -1,11 +1,14 @@
+const SUPABASE_URL = "https://turirctfxxjuovkkkeam.supabase.co";
+const SUPABASE_KEY = "sb_publishable_E5OTl9ous77W2iZsRTZaeg__WhJRTox";
+const TABLE_NAME = "tarefas";
+
 const STATUS = ["Não iniciado", "Em andamento", "Aguardando", "Concluído", "Cancelado"];
 const PRIORITY = ["Alta", "Média", "Baixa"];
-const API_URL = "https://script.google.com/macros/s/AKfycbyD-MLN9dfIdlr0FPxSahtOjsS9PN9VgEggGm1A-wzz6m5cg3PbHL6RHlT6WVqY_gU2/exec";
-const COLLAPSE_KEY = "sesivolei_mkt_cards_minimizados_v2";
+const COLLAPSE_KEY = "sesivolei_mkt_cards_minimizados_supabase_v1";
 
-let baseTasks = Array.isArray(window.PLANNER_TASKS) ? window.PLANNER_TASKS : [];
 let tasks = [];
 let collapsedCards = loadCollapsedCards();
+let isLoading = false;
 
 const el = {
   progress: document.getElementById("overallProgress"),
@@ -22,8 +25,8 @@ const el = {
 };
 
 document.getElementById("addTaskBtn").addEventListener("click", addTask);
-document.getElementById("saveBtn").addEventListener("click", saveAllCards);
-document.getElementById("reloadBtn").addEventListener("click", loadRemoteTasks);
+document.getElementById("saveBtn").addEventListener("click", saveAll);
+document.getElementById("reloadBtn").addEventListener("click", loadFromSupabase);
 document.getElementById("collapseAllBtn").addEventListener("click", collapseAllCards);
 document.getElementById("expandAllBtn").addEventListener("click", expandAllCards);
 document.getElementById("exportCsvBtn").addEventListener("click", exportCsv);
@@ -31,83 +34,91 @@ document.getElementById("exportJsonBtn").addEventListener("click", exportJson);
 el.statusFilter.addEventListener("change", render);
 el.searchInput.addEventListener("input", render);
 
-loadRemoteTasks();
+loadFromSupabase();
 
-function jsonp(params) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `__plannerCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const timeout = window.setTimeout(() => {
-      cleanup();
-      reject(new Error("Tempo esgotado ao conectar com o Google Sheets."));
-    }, 20000);
-
-    const script = document.createElement("script");
-    const query = new URLSearchParams({ ...params, callback: callbackName });
-
-    window[callbackName] = (data) => {
-      cleanup();
-      resolve(data);
-    };
-
-    script.onerror = () => {
-      cleanup();
-      reject(new Error("Não foi possível conectar ao Web App do Google Apps Script."));
-    };
-
-    script.src = `${API_URL}?${query.toString()}`;
-    document.body.appendChild(script);
-
-    function cleanup() {
-      window.clearTimeout(timeout);
-      delete window[callbackName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-  });
+function supabaseHeaders(extra = {}) {
+  return {
+    apikey: SUPABASE_KEY,
+    "Content-Type": "application/json",
+    ...extra
+  };
 }
 
-async function loadRemoteTasks() {
-  setState("Carregando dados do Google Sheets...", true);
+async function supabaseRequest(path, options = {}) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...options,
+    headers: supabaseHeaders(options.headers || {})
+  });
+
+  const text = await response.text();
+  let data = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+  }
+
+  if (!response.ok) {
+    const message = data?.message || data?.hint || data?.details || text || `Erro ${response.status}`;
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+function setLoading(state, message) {
+  isLoading = state;
+  document.querySelectorAll("button").forEach(btn => btn.disabled = state);
+  el.saveState.textContent = message || (state ? "Processando..." : "Pronto.");
+  el.saveState.classList.toggle("pending", state);
+}
+
+async function loadFromSupabase() {
+  setLoading(true, "Carregando dados do Supabase...");
 
   try {
-    const response = await jsonp({ action: "list" });
-
-    if (!response.success) {
-      throw new Error(response.error || "Erro ao carregar tarefas.");
+    const data = await supabaseRequest(`${TABLE_NAME}?select=*&order=id.asc`);
+    tasks = normalizeTasks(data || []);
+    if (!tasks.length && Array.isArray(window.PLANNER_TASKS)) {
+      tasks = normalizeTasks(window.PLANNER_TASKS);
+      await seedFallbackTasks();
     }
-
-    tasks = normalizeTasks(response.tasks || []);
-
-    if (!tasks.length && baseTasks.length) {
-      tasks = normalizeTasks(baseTasks);
-      setState("Planilha vazia. Usando base inicial local.", false);
-    } else {
-      setState("Dados sincronizados com o Google Sheets.", false);
-    }
-
+    el.saveState.textContent = "Dados carregados do Supabase.";
+    el.saveState.classList.remove("pending");
     render();
   } catch (error) {
     console.error(error);
-    tasks = normalizeTasks(baseTasks);
-    setState("Não foi possível conectar. Exibindo base local de segurança.", false);
-    render();
+    if (Array.isArray(window.PLANNER_TASKS)) {
+      tasks = normalizeTasks(window.PLANNER_TASKS);
+      render();
+    }
+    el.saveState.textContent = `Erro ao carregar Supabase: ${error.message}`;
+    el.saveState.classList.add("pending");
+    alert("Não foi possível carregar do Supabase. Confira se a tabela e as permissões foram criadas. Erro: " + error.message);
+  } finally {
+    setLoading(false, el.saveState.textContent);
   }
 }
 
-function normalizeTasks(list) {
-  return list.map((task, index) => ({
-    id: Number(task.id || index + 1),
-    atividade: task.atividade || "",
-    descricao: task.descricao || "",
-    responsavel: task.responsavel || "",
-    prioridade: task.prioridade || "Média",
-    status: task.status || "Não iniciado",
-    andamento: Number(task.andamento || 0),
-    inicioPlanejado: task.inicioPlanejado || "",
-    prazo: task.prazo || "",
-    proximaAcao: task.proximaAcao || "",
-    observacoes: task.observacoes || "",
-    ultimaAtualizacao: task.ultimaAtualizacao || ""
-  }));
+async function seedFallbackTasks() {
+  try {
+    for (const task of tasks) {
+      const payload = taskToPayload(task, false);
+      delete payload.id;
+      await supabaseRequest(`${TABLE_NAME}`, {
+        method: "POST",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify(payload)
+      });
+    }
+    const data = await supabaseRequest(`${TABLE_NAME}?select=*&order=id.asc`);
+    tasks = normalizeTasks(data || []);
+  } catch (error) {
+    console.warn("Não foi possível semear tarefas iniciais:", error);
+  }
 }
 
 function loadCollapsedCards() {
@@ -122,13 +133,173 @@ function saveCollapsedCards() {
   localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...collapsedCards]));
 }
 
-function setState(message, pending = false) {
-  el.saveState.textContent = message;
-  el.saveState.classList.toggle("pending", pending);
+function normalizeTasks(list) {
+  return list.map((task, index) => ({
+    id: Number(task.id || index + 1),
+    atividade: task.atividade || "",
+    descricao: task.descricao || "",
+    responsavel: task.responsavel || "",
+    prioridade: task.prioridade || "Média",
+    status: task.status || "Não iniciado",
+    andamento: Number(task.andamento || 0),
+    inicioPlanejado: normalizeDateValue(task.inicioPlanejado),
+    prazo: normalizeDateValue(task.prazo),
+    proximaAcao: task.proximaAcao || "",
+    observacoes: task.observacoes || "",
+    ultimaAtualizacao: normalizeDateValue(task.ultimaAtualizacao)
+  }));
 }
 
-function markPending() {
-  setState("Há alterações não salvas no Google Sheets.", true);
+async function addTask() {
+  const newTask = {
+    atividade: "Nova tarefa",
+    descricao: "",
+    responsavel: "",
+    prioridade: "Média",
+    status: "Não iniciado",
+    andamento: 0,
+    inicioPlanejado: null,
+    prazo: null,
+    proximaAcao: "",
+    observacoes: "",
+    ultimaAtualizacao: todayIso()
+  };
+
+  setLoading(true, "Criando tarefa no Supabase...");
+
+  try {
+    const created = await supabaseRequest(`${TABLE_NAME}`, {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(newTask)
+    });
+
+    const task = normalizeTasks(created)[0];
+    tasks.unshift(task);
+    collapsedCards.delete(task.id);
+    saveCollapsedCards();
+    render();
+
+    setTimeout(() => {
+      const input = document.querySelector(`[data-id="${task.id}"][data-field="atividade"]`);
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 0);
+
+    el.saveState.textContent = "Nova tarefa criada no Supabase.";
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível criar a tarefa no Supabase: " + error.message);
+    el.saveState.textContent = "Erro ao criar tarefa.";
+    el.saveState.classList.add("pending");
+  } finally {
+    setLoading(false, el.saveState.textContent);
+  }
+}
+
+async function saveAll() {
+  setLoading(true, "Salvando todas as tarefas no Supabase...");
+
+  try {
+    for (const task of tasks) {
+      await updateTask(task);
+    }
+    el.saveState.textContent = "Todas as tarefas foram salvas no Supabase.";
+    el.saveState.classList.remove("pending");
+    await loadFromSupabase();
+  } catch (error) {
+    console.error(error);
+    alert("Erro ao salvar todas as tarefas: " + error.message);
+    el.saveState.textContent = "Erro ao salvar todas.";
+    el.saveState.classList.add("pending");
+  } finally {
+    setLoading(false, el.saveState.textContent);
+  }
+}
+
+async function saveCard(id) {
+  const card = document.querySelector(`[data-card="${id}"]`);
+  const task = tasks.find(t => t.id === id);
+  if (!card || !task) return;
+
+  card.querySelectorAll("[data-field]").forEach(field => {
+    const key = field.dataset.field;
+    let value = field.value;
+
+    if (key === "andamento") {
+      value = Math.max(0, Math.min(100, Number(value || 0)));
+    }
+
+    task[key] = value;
+  });
+
+  if (task.status === "Concluído") task.andamento = 100;
+  if (Number(task.andamento) === 100) task.status = "Concluído";
+  task.ultimaAtualizacao = todayIso();
+
+  setLoading(true, `Salvando card #${String(id).padStart(2, "0")}...`);
+
+  try {
+    const updated = await updateTask(task);
+    const index = tasks.findIndex(t => t.id === id);
+    if (index >= 0 && updated) {
+      tasks[index] = normalizeTasks([updated])[0];
+    }
+
+    render();
+
+    setTimeout(() => {
+      const note = document.querySelector(`[data-save-note="${id}"]`);
+      if (note) {
+        note.classList.add("is-visible");
+        setTimeout(() => note.classList.remove("is-visible"), 1700);
+      }
+    }, 0);
+
+    el.saveState.textContent = `Card #${String(id).padStart(2, "0")} salvo no Supabase.`;
+    el.saveState.classList.remove("pending");
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível salvar o card: " + error.message);
+    el.saveState.textContent = "Erro ao salvar card.";
+    el.saveState.classList.add("pending");
+  } finally {
+    setLoading(false, el.saveState.textContent);
+  }
+}
+
+async function updateTask(task) {
+  const payload = taskToPayload(task, false);
+
+  const data = await supabaseRequest(`${TABLE_NAME}?id=eq.${encodeURIComponent(task.id)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(payload)
+  });
+
+  return Array.isArray(data) ? data[0] : null;
+}
+
+function taskToPayload(task, includeId = true) {
+  const payload = {
+    atividade: task.atividade || "",
+    descricao: task.descricao || "",
+    responsavel: task.responsavel || "",
+    prioridade: task.prioridade || "Média",
+    status: task.status || "Não iniciado",
+    andamento: Number(task.andamento || 0),
+    inicioPlanejado: emptyToNull(task.inicioPlanejado),
+    prazo: emptyToNull(task.prazo),
+    proximaAcao: task.proximaAcao || "",
+    observacoes: task.observacoes || "",
+    ultimaAtualizacao: todayIso()
+  };
+
+  if (includeId) payload.id = task.id;
+
+  return payload;
 }
 
 function filteredTasks() {
@@ -258,7 +429,7 @@ function renderCards() {
             <button class="btn btn-save-card" data-save="${task.id}">Salvar card</button>
             <button class="btn" data-duplicate="${task.id}">Duplicar</button>
             <button class="btn btn-danger" data-delete="${task.id}">Excluir tarefa</button>
-            <span class="save-note" data-save-note="${task.id}">Card salvo no Sheets!</span>
+            <span class="save-note" data-save-note="${task.id}">Card salvo!</span>
           </div>
         </div>
       </article>
@@ -332,181 +503,13 @@ function updateFieldSoft(event) {
 
   if (field === "status" && value === "Concluído") task.andamento = 100;
   if (field === "andamento" && Number(value) === 100) task.status = "Concluído";
-
   task.ultimaAtualizacao = todayIso();
-  markPending();
+
+  el.saveState.textContent = "Há alterações não salvas no Supabase.";
+  el.saveState.classList.add("pending");
+
   renderKpis();
   renderTable();
-}
-
-async function saveCard(id) {
-  const card = document.querySelector(`[data-card="${id}"]`);
-  const task = tasks.find(t => t.id === id);
-  if (!card || !task) return;
-
-  card.querySelectorAll("[data-field]").forEach(field => {
-    const key = field.dataset.field;
-    let value = field.value;
-    if (key === "andamento") value = Math.max(0, Math.min(100, Number(value || 0)));
-    task[key] = value;
-  });
-
-  if (task.status === "Concluído") task.andamento = 100;
-  if (Number(task.andamento) === 100) task.status = "Concluído";
-  task.ultimaAtualizacao = todayIso();
-
-  setState(`Salvando card #${String(id).padStart(2, "0")} no Google Sheets...`, true);
-
-  try {
-    const response = await jsonp({ action: "save", ...task });
-    if (!response.success) throw new Error(response.error || "Erro ao salvar card.");
-
-    const index = tasks.findIndex(t => Number(t.id) === id);
-    if (index >= 0 && response.task) tasks[index] = normalizeTasks([response.task])[0];
-
-    setState(`Card #${String(id).padStart(2, "0")} salvo no Google Sheets.`, false);
-    render();
-
-    setTimeout(() => {
-      const note = document.querySelector(`[data-save-note="${id}"]`);
-      if (note) {
-        note.classList.add("is-visible");
-        setTimeout(() => note.classList.remove("is-visible"), 1700);
-      }
-    }, 0);
-  } catch (error) {
-    console.error(error);
-    setState(`Erro ao salvar card #${String(id).padStart(2, "0")}: ${error.message}`, false);
-    alert(error.message);
-  }
-}
-
-async function saveAllCards() {
-  const visible = filteredTasks();
-  if (!visible.length) return;
-
-  const ok = confirm(`Salvar ${visible.length} tarefa(s) visíveis no Google Sheets?`);
-  if (!ok) return;
-
-  setState("Salvando todas as tarefas visíveis no Google Sheets...", true);
-
-  try {
-    for (const task of visible) {
-      await jsonp({ action: "save", ...task });
-    }
-
-    setState("Tarefas visíveis salvas no Google Sheets.", false);
-    await loadRemoteTasks();
-  } catch (error) {
-    console.error(error);
-    setState(`Erro ao salvar todas: ${error.message}`, false);
-    alert(error.message);
-  }
-}
-
-async function addTask() {
-  const newTask = {
-    atividade: "Nova tarefa",
-    descricao: "",
-    responsavel: "",
-    prioridade: "Média",
-    status: "Não iniciado",
-    andamento: 0,
-    inicioPlanejado: "",
-    prazo: "",
-    proximaAcao: "",
-    observacoes: "",
-    ultimaAtualizacao: todayIso()
-  };
-
-  setState("Criando nova tarefa no Google Sheets...", true);
-
-  try {
-    const response = await jsonp({ action: "create", ...newTask });
-    if (!response.success) throw new Error(response.error || "Erro ao criar tarefa.");
-
-    if (response.task) {
-      const created = normalizeTasks([response.task])[0];
-      tasks.unshift(created);
-      collapsedCards.delete(created.id);
-      saveCollapsedCards();
-    }
-
-    setState("Nova tarefa criada no Google Sheets.", false);
-    render();
-
-    setTimeout(() => {
-      const input = document.querySelector(`[data-field="atividade"]`);
-      if (input) {
-        input.focus();
-        input.select();
-      }
-    }, 0);
-  } catch (error) {
-    console.error(error);
-    setState(`Erro ao criar tarefa: ${error.message}`, false);
-    alert(error.message);
-  }
-}
-
-async function deleteTask(id) {
-  const task = tasks.find(t => t.id === id);
-  if (!task) return;
-
-  const ok = confirm(`Excluir a tarefa "${task.atividade || "sem título"}" da planilha?`);
-  if (!ok) return;
-
-  setState(`Excluindo card #${String(id).padStart(2, "0")} do Google Sheets...`, true);
-
-  try {
-    const response = await jsonp({ action: "delete", id });
-    if (!response.success) throw new Error(response.error || "Erro ao excluir tarefa.");
-
-    tasks = tasks.filter(t => Number(t.id) !== id);
-    collapsedCards.delete(id);
-    saveCollapsedCards();
-    setState("Tarefa excluída do Google Sheets.", false);
-    render();
-  } catch (error) {
-    console.error(error);
-    setState(`Erro ao excluir tarefa: ${error.message}`, false);
-    alert(error.message);
-  }
-}
-
-async function duplicateTask(id) {
-  const task = tasks.find(t => t.id === id);
-  if (!task) return;
-
-  const copy = {
-    ...task,
-    id: "",
-    atividade: `${task.atividade} — cópia`,
-    status: "Não iniciado",
-    andamento: 0,
-    ultimaAtualizacao: todayIso()
-  };
-
-  setState("Duplicando tarefa no Google Sheets...", true);
-
-  try {
-    const response = await jsonp({ action: "create", ...copy });
-    if (!response.success) throw new Error(response.error || "Erro ao duplicar tarefa.");
-
-    if (response.task) {
-      const created = normalizeTasks([response.task])[0];
-      tasks.unshift(created);
-      collapsedCards.delete(created.id);
-      saveCollapsedCards();
-    }
-
-    setState("Tarefa duplicada no Google Sheets.", false);
-    render();
-  } catch (error) {
-    console.error(error);
-    setState(`Erro ao duplicar tarefa: ${error.message}`, false);
-    alert(error.message);
-  }
 }
 
 function toggleCard(id) {
@@ -526,6 +529,73 @@ function expandAllCards() {
   filteredTasks().forEach(task => collapsedCards.delete(Number(task.id)));
   saveCollapsedCards();
   renderCards();
+}
+
+async function deleteTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+
+  const ok = confirm(`Excluir a tarefa "${task.atividade || "sem título"}"?`);
+  if (!ok) return;
+
+  setLoading(true, "Excluindo tarefa no Supabase...");
+
+  try {
+    await supabaseRequest(`${TABLE_NAME}?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
+    tasks = tasks.filter(t => t.id !== id);
+    collapsedCards.delete(id);
+    saveCollapsedCards();
+    render();
+    el.saveState.textContent = "Tarefa excluída do Supabase.";
+    el.saveState.classList.remove("pending");
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível excluir a tarefa: " + error.message);
+    el.saveState.textContent = "Erro ao excluir tarefa.";
+    el.saveState.classList.add("pending");
+  } finally {
+    setLoading(false, el.saveState.textContent);
+  }
+}
+
+async function duplicateTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+
+  const copy = {
+    ...task,
+    atividade: `${task.atividade} — cópia`,
+    status: "Não iniciado",
+    andamento: 0,
+    ultimaAtualizacao: todayIso()
+  };
+
+  delete copy.id;
+
+  setLoading(true, "Duplicando tarefa no Supabase...");
+
+  try {
+    const created = await supabaseRequest(`${TABLE_NAME}`, {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(taskToPayload(copy, false))
+    });
+
+    const newTask = normalizeTasks(created)[0];
+    tasks.unshift(newTask);
+    collapsedCards.delete(newTask.id);
+    saveCollapsedCards();
+    render();
+    el.saveState.textContent = "Tarefa duplicada no Supabase.";
+    el.saveState.classList.remove("pending");
+  } catch (error) {
+    console.error(error);
+    alert("Não foi possível duplicar a tarefa: " + error.message);
+    el.saveState.textContent = "Erro ao duplicar tarefa.";
+    el.saveState.classList.add("pending");
+  } finally {
+    setLoading(false, el.saveState.textContent);
+  }
 }
 
 function deadlineStatus(task) {
@@ -592,6 +662,16 @@ function formatDate(value) {
   if (!value) return "-";
   const d = new Date(`${value}T00:00:00`);
   return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("pt-BR");
+}
+
+function normalizeDateValue(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value.slice(0, 10);
+  return "";
+}
+
+function emptyToNull(value) {
+  return value ? value : null;
 }
 
 function todayIso() {

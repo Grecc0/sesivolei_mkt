@@ -1,26 +1,27 @@
-# SESI Vôlei MKT — Planner conectado ao Google Sheets
+# SESI Vôlei MKT — Planner conectado ao Supabase
 
-Esta versão usa o Google Sheets como base externa. O planner lê, cria, edita e exclui tarefas por meio do Web App do Google Apps Script.
+Esta versão conecta o planner diretamente ao Supabase.
 
-## Como funciona
+## O que mudou
 
-- Ao abrir o site, o planner carrega as tarefas da aba `tarefas` no Google Sheets.
-- Ao clicar em **Salvar card**, a tarefa é atualizada na planilha.
-- Ao clicar em **Adicionar tarefa**, uma nova linha é criada na planilha.
-- Ao excluir uma tarefa, a linha correspondente é removida da planilha.
-- O arquivo `data.js` fica apenas como base de segurança caso o Web App não responda.
+- O planner carrega as tarefas da tabela `public.tarefas`.
+- O botão **Salvar card** atualiza o registro no Supabase.
+- O botão **Adicionar tarefa** cria uma nova linha na tabela.
+- O botão **Excluir tarefa** remove a linha da tabela.
+- O botão **Salvar todas** atualiza todas as tarefas.
+- O botão **Recarregar base** busca novamente os dados do Supabase.
+- O `data.js` fica apenas como fallback, caso a tabela esteja vazia ou indisponível.
 
-## Arquivos principais
+## Configuração usada
 
-- `index.html` — estrutura da página.
-- `style.css` — visual do planner.
-- `app.js` — integração com o Google Sheets.
-- `data.js` — fallback local.
-- `README.md` — instruções.
+```text
+SUPABASE_URL=https://turirctfxxjuovkkkeam.supabase.co
+TABLE_NAME=tarefas
+```
 
-## Publicação
+## Arquivos do site
 
-Envie estes arquivos para a raiz do repositório `Grecc0/sesivolei_mkt`:
+Envie estes arquivos para a raiz do repositório:
 
 - `index.html`
 - `style.css`
@@ -28,19 +29,28 @@ Envie estes arquivos para a raiz do repositório `Grecc0/sesivolei_mkt`:
 - `data.js`
 - `README.md`
 
-Depois faça o commit. O GitHub Pages continuará publicando em:
+## Tabela esperada no Supabase
 
-```text
-https://grecc0.github.io/sesivolei_mkt/
-```
+A tabela deve se chamar `tarefas` e ter estas colunas:
 
-## Atenção
+- `id`
+- `atividade`
+- `descricao`
+- `responsavel`
+- `prioridade`
+- `status`
+- `andamento`
+- `inicioPlanejado`
+- `prazo`
+- `proximaAcao`
+- `observacoes`
+- `ultimaAtualizacao`
 
-O Web App do Apps Script deve estar implantado com:
+## Observação de segurança
 
-```text
-Executar como: Eu
-Quem tem acesso: Qualquer pessoa
-```
+Esta versão usa a publishable key no navegador e depende das policies de Row Level Security do Supabase. Como o objetivo é um planner editável por quem tem o link, as policies precisam permitir `select`, `insert`, `update` e `delete` para o papel `anon`.
 
-Como o Web App permite escrita na planilha, compartilhe o link do planner apenas com pessoas que podem editar o acompanhamento.
+
+## Observação sobre a publishable key
+
+Esta versão usa a chave `sb_publishable_...` apenas no cabeçalho `apikey`, sem enviar essa chave como `Authorization: Bearer`, para manter compatibilidade com o modelo novo de chaves do Supabase.
