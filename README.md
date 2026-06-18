@@ -1,4 +1,4 @@
-# SESI Vôlei MKT — Planner Totalmente Editável
+# SESI Vôlei MKT — Planner de Ações
 
 Esta versão permite editar o planner diretamente na página, inclusive os títulos das tarefas.
 
