@@ -3,104 +3,93 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Planner de Ações do Vôlei | SESI</title>
-  <meta name="description" content="Planner online para acompanhamento das ações de marketing e comunicação do vôlei.">
+  <title>Planner Totalmente Editável | SESI Vôlei MKT</title>
+  <meta name="description" content="Planner totalmente editável para acompanhamento das ações de marketing do vôlei.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="hero">
-    <div class="hero__content">
+    <div>
       <p class="eyebrow">SESI Vôlei • Marketing e Comunicação</p>
-      <h1>Planner de Acompanhamento das Ações do Vôlei</h1>
-      <p class="hero__text">Painel online para visualizar prazos, responsáveis, prioridades, status e andamento das tarefas.</p>
-      <div class="hero__actions">
-        <a href="#planner" class="button button--primary">Ver planner</a>
-        <button id="exportCsv" class="button button--secondary" type="button">Exportar CSV</button>
+      <h1>Planner totalmente editável</h1>
+      <p>Edite tudo diretamente nos cards: títulos das tarefas, descrições, responsáveis, prazos, status, andamento, observações e próximas ações.</p>
+      <div class="actions">
+        <button id="addTaskBtn" class="btn btn-primary">+ Adicionar tarefa</button>
+        <button id="saveBtn" class="btn btn-light">Salvar alterações</button>
+        <button id="downloadDataBtn" class="btn btn-light">Baixar data.js atualizado</button>
       </div>
     </div>
-    <div class="hero__panel">
-      <span class="panel__label">Progresso geral</span>
+    <div class="progress-card">
+      <span>Progresso geral</span>
       <strong id="overallProgress">0%</strong>
-      <div class="progress progress--hero"><span id="overallProgressBar"></span></div>
-      <small id="lastSync">Dados-base carregados do repositório.</small>
+      <div class="progress"><i id="overallProgressBar"></i></div>
+      <small id="saveState">Dados carregados.</small>
     </div>
   </header>
 
   <main>
-    <section class="notice" aria-label="Aviso sobre atualização dos dados">
-      <strong>Importante:</strong> alterações feitas nesta página ficam salvas apenas no navegador de quem editou. Para atualizar o painel para todos, edite o arquivo <code>data.js</code> no repositório e faça um commit.
+    <section class="alert">
+      <strong>Como funciona:</strong> todos os campos são editáveis. Clique no campo, altere e depois clique em <strong>Salvar alterações</strong>. Para publicar a versão atualizada para todos, clique em <strong>Baixar data.js atualizado</strong> e substitua o arquivo no GitHub.
     </section>
 
-    <section class="kpis" aria-label="Indicadores do planner">
-      <article class="kpi">
-        <span>Total de ações</span>
-        <strong id="kpiTotal">0</strong>
-      </article>
-      <article class="kpi">
-        <span>Concluídas</span>
-        <strong id="kpiDone">0</strong>
-      </article>
-      <article class="kpi">
-        <span>Em andamento</span>
-        <strong id="kpiProgress">0</strong>
-      </article>
-      <article class="kpi">
-        <span>Atrasadas</span>
-        <strong id="kpiLate">0</strong>
-      </article>
+    <section class="toolbar">
+      <div class="kpi"><span>Total de tarefas</span><strong id="kpiTotal">0</strong></div>
+      <div class="kpi"><span>Concluídas</span><strong id="kpiDone">0</strong></div>
+      <div class="kpi"><span>Em andamento</span><strong id="kpiDoing">0</strong></div>
+      <div class="kpi"><span>Atrasadas</span><strong id="kpiLate">0</strong></div>
     </section>
 
-    <section class="dashboard">
-      <div class="card">
-        <div class="card__header">
-          <h2>Status das ações</h2>
-          <p>Distribuição atual das tarefas por situação.</p>
-        </div>
-        <div id="statusSummary" class="summary-list"></div>
-      </div>
+    <section class="filters">
+      <label>Status
+        <select id="statusFilter">
+          <option value="">Todos</option>
+          <option>Não iniciado</option>
+          <option>Em andamento</option>
+          <option>Aguardando</option>
+          <option>Concluído</option>
+          <option>Cancelado</option>
+        </select>
+      </label>
 
-      <div class="card">
-        <div class="card__header">
-          <h2>Próximas entregas</h2>
-          <p>Ordenadas por prazo mais próximo.</p>
-        </div>
-        <div id="nextDeliveries" class="delivery-list"></div>
-      </div>
+      <label>Buscar
+        <input type="search" id="searchInput" placeholder="Buscar por título, responsável, descrição...">
+      </label>
+
+      <button id="exportCsvBtn" class="btn">Exportar CSV</button>
+      <button id="exportJsonBtn" class="btn">Exportar JSON</button>
+
+      <label class="file-label">
+        Importar JSON/data.js
+        <input type="file" id="importFile" accept=".json,.js">
+      </label>
+
+      <button id="resetBtn" class="btn btn-danger">Restaurar base inicial</button>
     </section>
 
-    <section id="planner" class="planner">
-      <div class="section-heading">
+    <section class="panel">
+      <div class="panel-header">
         <div>
-          <p class="eyebrow">Acompanhamento</p>
-          <h2>Planner das tarefas</h2>
+          <p class="eyebrow">Edição direta</p>
+          <h2>Tarefas do planner</h2>
         </div>
-        <div class="filters">
-          <label>
-            Status
-            <select id="filterStatus">
-              <option value="">Todos</option>
-              <option>Não iniciado</option>
-              <option>Em andamento</option>
-              <option>Aguardando</option>
-              <option>Concluído</option>
-              <option>Cancelado</option>
-            </select>
-          </label>
-          <label>
-            Busca
-            <input id="searchInput" type="search" placeholder="Buscar ação, descrição ou responsável">
-          </label>
+        <p>O título da tarefa também é editável.</p>
+      </div>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">Resumo</p>
+          <h2>Tabela consolidada</h2>
         </div>
       </div>
-
-      <div id="taskCards" class="task-grid"></div>
-
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>ID</th>
-              <th>Atividade</th>
+              <th>Tarefa</th>
               <th>Responsável</th>
               <th>Prioridade</th>
               <th>Status</th>
@@ -110,14 +99,14 @@
               <th>Próxima ação</th>
             </tr>
           </thead>
-          <tbody id="taskTable"></tbody>
+          <tbody id="tableBody"></tbody>
         </table>
       </div>
     </section>
   </main>
 
   <footer>
-    <p>Planner SESI Vôlei • Atualize o arquivo <code>data.js</code> para refletir mudanças públicas no acompanhamento.</p>
+    <p>SESI Vôlei MKT • Planner editável</p>
   </footer>
 
   <script src="data.js"></script>
