@@ -1,6 +1,6 @@
-# SESI Vôlei MKT — Planner de Ações
+# SESI Vôlei MKT — Planner com Cards Minimizáveis
 
-Esta versão permite editar o planner diretamente na página, inclusive os títulos das tarefas.
+Esta versão permite editar o planner diretamente na página, inclusive os títulos das tarefas. Cada card possui botão para minimizar/expandir e botão próprio para salvar.
 
 ## O que é editável
 
@@ -19,6 +19,9 @@ Todos os campos abaixo podem ser editados diretamente nos cards:
 
 Também é possível:
 
+- minimizar e expandir cards individualmente;
+- minimizar e expandir todos os cards;
+- salvar cada card individualmente;
 - adicionar novas tarefas;
 - duplicar tarefas;
 - excluir tarefas;

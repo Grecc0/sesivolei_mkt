@@ -1,9 +1,11 @@
 const STATUS = ["Não iniciado", "Em andamento", "Aguardando", "Concluído", "Cancelado"];
 const PRIORITY = ["Alta", "Média", "Baixa"];
-const STORAGE_KEY = "sesivolei_mkt_totalmente_editavel_v3";
+const STORAGE_KEY = "sesivolei_mkt_totalmente_editavel_v4";
+const COLLAPSE_KEY = "sesivolei_mkt_cards_minimizados_v1";
 
 let baseTasks = Array.isArray(window.PLANNER_TASKS) ? window.PLANNER_TASKS : [];
 let tasks = loadTasks();
+let collapsedCards = loadCollapsedCards();
 
 const el = {
   progress: document.getElementById("overallProgress"),
@@ -21,6 +23,8 @@ const el = {
 
 document.getElementById("addTaskBtn").addEventListener("click", addTask);
 document.getElementById("saveBtn").addEventListener("click", saveLocal);
+document.getElementById("collapseAllBtn").addEventListener("click", collapseAllCards);
+document.getElementById("expandAllBtn").addEventListener("click", expandAllCards);
 document.getElementById("downloadDataBtn").addEventListener("click", downloadDataJs);
 document.getElementById("exportCsvBtn").addEventListener("click", exportCsv);
 document.getElementById("exportJsonBtn").addEventListener("click", exportJson);
@@ -39,6 +43,19 @@ function loadTasks() {
   } catch {
     return normalizeTasks(baseTasks);
   }
+}
+
+
+function loadCollapsedCards() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(COLLAPSE_KEY) || "[]").map(Number));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveCollapsedCards() {
+  localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...collapsedCards]));
 }
 
 function normalizeTasks(list) {
@@ -144,72 +161,90 @@ function renderCards() {
 
   el.cards.innerHTML = list.map(task => {
     const d = deadlineStatus(task);
+    const isCollapsed = collapsedCards.has(Number(task.id));
 
     return `
-      <article class="card">
+      <article class="card ${isCollapsed ? "is-collapsed" : ""}" data-card="${task.id}">
         <div class="card-top">
           <span class="badge">#${String(task.id).padStart(2, "0")}</span>
           <span class="badge ${statusClass(task.status)}">${escapeHtml(task.status)}</span>
         </div>
 
-        <label>Título da tarefa
-          <input class="title-input" value="${escapeAttr(task.atividade)}" data-id="${task.id}" data-field="atividade" placeholder="Título da tarefa">
-        </label>
-
-        <label>Descrição
-          <textarea data-id="${task.id}" data-field="descricao" placeholder="Descreva a tarefa">${escapeHtml(task.descricao)}</textarea>
-        </label>
-
-        <div class="edit-grid">
-          <label>Responsável
-            <input value="${escapeAttr(task.responsavel)}" data-id="${task.id}" data-field="responsavel" placeholder="Nome">
-          </label>
-
-          <label>Prioridade
-            <select data-id="${task.id}" data-field="prioridade">
-              ${PRIORITY.map(p => `<option ${p === task.prioridade ? "selected" : ""}>${p}</option>`).join("")}
-            </select>
-          </label>
+        <div class="card-actions-top">
+          <button class="btn btn-minimize" data-toggle="${task.id}" aria-expanded="${!isCollapsed}">
+            ${isCollapsed ? "Expandir" : "Minimizar"}
+          </button>
+          <button class="btn btn-save-card" data-save="${task.id}">Salvar card</button>
         </div>
 
-        <div class="edit-grid-3">
-          <label>Status
-            <select data-id="${task.id}" data-field="status">
-              ${STATUS.map(s => `<option ${s === task.status ? "selected" : ""}>${s}</option>`).join("")}
-            </select>
-          </label>
-
-          <label>Andamento %
-            <input type="number" min="0" max="100" step="5" value="${Number(task.andamento || 0)}" data-id="${task.id}" data-field="andamento">
-          </label>
-
-          <label>Prazo
-            <input type="date" value="${escapeAttr(task.prazo)}" data-id="${task.id}" data-field="prazo">
-          </label>
-        </div>
-
-        <label>Início planejado
-          <input type="date" value="${escapeAttr(task.inicioPlanejado)}" data-id="${task.id}" data-field="inicioPlanejado">
-        </label>
-
-        <label>Próxima ação
-          <textarea data-id="${task.id}" data-field="proximaAcao" placeholder="Qual é o próximo passo?">${escapeHtml(task.proximaAcao)}</textarea>
-        </label>
-
-        <label>Observações
-          <textarea data-id="${task.id}" data-field="observacoes" placeholder="Registre pontos de atenção">${escapeHtml(task.observacoes)}</textarea>
-        </label>
-
-        <div class="progress"><i style="width:${Number(task.andamento || 0)}%"></i></div>
-
-        <div class="card-top">
+        <div class="card-summary">
+          <strong>${escapeHtml(task.atividade || "Sem título")}</strong>
+          <small>${escapeHtml(task.responsavel || "A definir")} • ${formatDate(task.prazo)} • ${Number(task.andamento || 0)}%</small>
           <span class="badge ${d.className}">${d.label}</span>
-          <span class="muted">${d.daysText}</span>
         </div>
 
-        <div class="card-actions">
-          <button class="btn" data-duplicate="${task.id}">Duplicar</button>
-          <button class="btn btn-danger" data-delete="${task.id}">Excluir tarefa</button>
+        <div class="card-body">
+          <label>Título da tarefa
+            <input class="title-input" value="${escapeAttr(task.atividade)}" data-id="${task.id}" data-field="atividade" placeholder="Título da tarefa">
+          </label>
+
+          <label>Descrição
+            <textarea data-id="${task.id}" data-field="descricao" placeholder="Descreva a tarefa">${escapeHtml(task.descricao)}</textarea>
+          </label>
+
+          <div class="edit-grid">
+            <label>Responsável
+              <input value="${escapeAttr(task.responsavel)}" data-id="${task.id}" data-field="responsavel" placeholder="Nome">
+            </label>
+
+            <label>Prioridade
+              <select data-id="${task.id}" data-field="prioridade">
+                ${PRIORITY.map(p => `<option ${p === task.prioridade ? "selected" : ""}>${p}</option>`).join("")}
+              </select>
+            </label>
+          </div>
+
+          <div class="edit-grid-3">
+            <label>Status
+              <select data-id="${task.id}" data-field="status">
+                ${STATUS.map(s => `<option ${s === task.status ? "selected" : ""}>${s}</option>`).join("")}
+              </select>
+            </label>
+
+            <label>Andamento %
+              <input type="number" min="0" max="100" step="5" value="${Number(task.andamento || 0)}" data-id="${task.id}" data-field="andamento">
+            </label>
+
+            <label>Prazo
+              <input type="date" value="${escapeAttr(task.prazo)}" data-id="${task.id}" data-field="prazo">
+            </label>
+          </div>
+
+          <label>Início planejado
+            <input type="date" value="${escapeAttr(task.inicioPlanejado)}" data-id="${task.id}" data-field="inicioPlanejado">
+          </label>
+
+          <label>Próxima ação
+            <textarea data-id="${task.id}" data-field="proximaAcao" placeholder="Qual é o próximo passo?">${escapeHtml(task.proximaAcao)}</textarea>
+          </label>
+
+          <label>Observações
+            <textarea data-id="${task.id}" data-field="observacoes" placeholder="Registre pontos de atenção">${escapeHtml(task.observacoes)}</textarea>
+          </label>
+
+          <div class="progress"><i style="width:${Number(task.andamento || 0)}%"></i></div>
+
+          <div class="card-top">
+            <span class="badge ${d.className}">${d.label}</span>
+            <span class="muted">${d.daysText}</span>
+          </div>
+
+          <div class="card-actions">
+            <button class="btn btn-save-card" data-save="${task.id}">Salvar card</button>
+            <button class="btn" data-duplicate="${task.id}">Duplicar</button>
+            <button class="btn btn-danger" data-delete="${task.id}">Excluir tarefa</button>
+            <span class="save-note" data-save-note="${task.id}">Card salvo!</span>
+          </div>
         </div>
       </article>
     `;
@@ -226,6 +261,14 @@ function renderCards() {
         }
       });
     }
+  });
+
+  el.cards.querySelectorAll("[data-save]").forEach(btn => {
+    btn.addEventListener("click", () => saveCard(Number(btn.dataset.save)));
+  });
+
+  el.cards.querySelectorAll("[data-toggle]").forEach(btn => {
+    btn.addEventListener("click", () => toggleCard(Number(btn.dataset.toggle)));
   });
 
   el.cards.querySelectorAll("[data-delete]").forEach(btn => {
@@ -286,6 +329,63 @@ function updateField(event) {
   render();
 }
 
+
+function saveCard(id) {
+  const card = document.querySelector(`[data-card="${id}"]`);
+  const task = tasks.find(t => t.id === id);
+  if (!card || !task) return;
+
+  card.querySelectorAll("[data-field]").forEach(field => {
+    const key = field.dataset.field;
+    let value = field.value;
+
+    if (key === "andamento") {
+      value = Math.max(0, Math.min(100, Number(value || 0)));
+    }
+
+    task[key] = value;
+  });
+
+  if (task.status === "Concluído") task.andamento = 100;
+  if (Number(task.andamento) === 100) task.status = "Concluído";
+  task.ultimaAtualizacao = todayIso();
+
+  saveLocal();
+
+  render();
+
+  setTimeout(() => {
+    const note = document.querySelector(`[data-save-note="${id}"]`);
+    if (note) {
+      note.classList.add("is-visible");
+      setTimeout(() => note.classList.remove("is-visible"), 1700);
+    }
+  }, 0);
+}
+
+function toggleCard(id) {
+  if (collapsedCards.has(id)) {
+    collapsedCards.delete(id);
+  } else {
+    collapsedCards.add(id);
+  }
+
+  saveCollapsedCards();
+  renderCards();
+}
+
+function collapseAllCards() {
+  filteredTasks().forEach(task => collapsedCards.add(Number(task.id)));
+  saveCollapsedCards();
+  renderCards();
+}
+
+function expandAllCards() {
+  filteredTasks().forEach(task => collapsedCards.delete(Number(task.id)));
+  saveCollapsedCards();
+  renderCards();
+}
+
 function deleteTask(id) {
   const task = tasks.find(t => t.id === id);
   if (!task) return;
@@ -294,6 +394,8 @@ function deleteTask(id) {
   if (!ok) return;
 
   tasks = tasks.filter(t => t.id !== id);
+  collapsedCards.delete(id);
+  saveCollapsedCards();
   markPending();
   saveLocal();
   render();
@@ -313,6 +415,8 @@ function duplicateTask(id) {
   };
 
   tasks.unshift(copy);
+  collapsedCards.delete(copy.id);
+  saveCollapsedCards();
   markPending();
   saveLocal();
   render();
@@ -408,6 +512,8 @@ function resetBase() {
   if (!ok) return;
 
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(COLLAPSE_KEY);
+  collapsedCards = new Set();
   tasks = normalizeTasks(baseTasks);
   render();
   el.saveState.textContent = "Base inicial restaurada.";

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Planner Ações de Marketing | SESI Vôlei </title>
+  <title>Planner Totalmente Editável | SESI Vôlei MKT</title>
   <meta name="description" content="Planner totalmente editável para acompanhamento das ações de marketing do vôlei.">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -11,11 +11,13 @@
   <header class="hero">
     <div>
       <p class="eyebrow">SESI Vôlei • Marketing e Comunicação</p>
-      <h1>Planner Ações de Marketing</h1>
-      <p>Planner para visualização e acompanhamento geral de tarefas voltadas às equipes de Vôlei.</p>
+      <h1>Planner totalmente editável</h1>
+      <p>Edite tudo diretamente nos cards: títulos das tarefas, descrições, responsáveis, prazos, status, andamento, observações e próximas ações.</p>
       <div class="actions">
         <button id="addTaskBtn" class="btn btn-primary">+ Adicionar tarefa</button>
-        <button id="saveBtn" class="btn btn-light">Salvar alterações</button>
+        <button id="saveBtn" class="btn btn-light">Salvar todas</button>
+        <button id="collapseAllBtn" class="btn btn-light">Minimizar todos</button>
+        <button id="expandAllBtn" class="btn btn-light">Expandir todos</button>
         <button id="downloadDataBtn" class="btn btn-light">Baixar data.js atualizado</button>
       </div>
     </div>
@@ -29,7 +31,7 @@
 
   <main>
     <section class="alert">
-      <strong>Como funciona:</strong> todos os campos são editáveis. Clique no campo, altere e depois clique em <strong>Salvar alterações</strong>. Para publicar a versão atualizada para todos, clique em <strong>Baixar data.js atualizado</strong> e substitua o arquivo no GitHub.
+      <strong>Como funciona:</strong> todos os campos são editáveis. Clique no campo, altere e depois clique em <strong>Salvar card</strong> ou <strong>Salvar todas</strong>. Para publicar a versão atualizada para todos, clique em <strong>Baixar data.js atualizado</strong> e substitua o arquivo no GitHub.
     </section>
 
     <section class="toolbar">
@@ -72,7 +74,7 @@
           <p class="eyebrow">Edição direta</p>
           <h2>Tarefas do planner</h2>
         </div>
-        <p>O título da tarefa também é editável.</p>
+        <p>Cada card tem botão para minimizar/expandir e botão próprio para salvar.</p>
       </div>
       <div id="cards" class="cards"></div>
     </section>
