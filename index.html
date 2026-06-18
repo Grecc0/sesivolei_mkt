@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Planner de Ações do Vôlei | SESI</title>
+  <meta name="description" content="Planner online para acompanhamento das ações de marketing e comunicação do vôlei.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__content">
+      <p class="eyebrow">SESI Vôlei • Marketing e Comunicação</p>
+      <h1>Planner de Acompanhamento das Ações do Vôlei</h1>
+      <p class="hero__text">Painel online para visualizar prazos, responsáveis, prioridades, status e andamento das tarefas.</p>
+      <div class="hero__actions">
+        <a href="#planner" class="button button--primary">Ver planner</a>
+        <button id="exportCsv" class="button button--secondary" type="button">Exportar CSV</button>
+      </div>
+    </div>
+    <div class="hero__panel">
+      <span class="panel__label">Progresso geral</span>
+      <strong id="overallProgress">0%</strong>
+      <div class="progress progress--hero"><span id="overallProgressBar"></span></div>
+      <small id="lastSync">Dados-base carregados do repositório.</small>
+    </div>
+  </header>
+
+  <main>
+    <section class="notice" aria-label="Aviso sobre atualização dos dados">
+      <strong>Importante:</strong> alterações feitas nesta página ficam salvas apenas no navegador de quem editou. Para atualizar o painel para todos, edite o arquivo <code>data.js</code> no repositório e faça um commit.
+    </section>
+
+    <section class="kpis" aria-label="Indicadores do planner">
+      <article class="kpi">
+        <span>Total de ações</span>
+        <strong id="kpiTotal">0</strong>
+      </article>
+      <article class="kpi">
+        <span>Concluídas</span>
+        <strong id="kpiDone">0</strong>
+      </article>
+      <article class="kpi">
+        <span>Em andamento</span>
+        <strong id="kpiProgress">0</strong>
+      </article>
+      <article class="kpi">
+        <span>Atrasadas</span>
+        <strong id="kpiLate">0</strong>
+      </article>
+    </section>
+
+    <section class="dashboard">
+      <div class="card">
+        <div class="card__header">
+          <h2>Status das ações</h2>
+          <p>Distribuição atual das tarefas por situação.</p>
+        </div>
+        <div id="statusSummary" class="summary-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card__header">
+          <h2>Próximas entregas</h2>
+          <p>Ordenadas por prazo mais próximo.</p>
+        </div>
+        <div id="nextDeliveries" class="delivery-list"></div>
+      </div>
+    </section>
+
+    <section id="planner" class="planner">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Acompanhamento</p>
+          <h2>Planner das tarefas</h2>
+        </div>
+        <div class="filters">
+          <label>
+            Status
+            <select id="filterStatus">
+              <option value="">Todos</option>
+              <option>Não iniciado</option>
+              <option>Em andamento</option>
+              <option>Aguardando</option>
+              <option>Concluído</option>
+              <option>Cancelado</option>
+            </select>
+          </label>
+          <label>
+            Busca
+            <input id="searchInput" type="search" placeholder="Buscar ação, descrição ou responsável">
+          </label>
+        </div>
+      </div>
+
+      <div id="taskCards" class="task-grid"></div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Atividade</th>
+              <th>Responsável</th>
+              <th>Prioridade</th>
+              <th>Status</th>
+              <th>Andamento</th>
+              <th>Prazo</th>
+              <th>Situação</th>
+              <th>Próxima ação</th>
+            </tr>
+          </thead>
+          <tbody id="taskTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Planner SESI Vôlei • Atualize o arquivo <code>data.js</code> para refletir mudanças públicas no acompanhamento.</p>
+  </footer>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
